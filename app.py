@@ -32,32 +32,35 @@ def img2text(image):
     return text
 
 def text2story(description):
-    """Generates a 50-100 word story directly from the image description."""
+    """A universal storyteller that adapts to ANY image uploaded."""
     
-    # We prime the AI with a very clear instruction and a happy starting sentence.
-    # This prevents it from hallucinating random names or scary facts.
-    prompt = f"Write a happy children's story about {description}. Once upon a time, in a magical land,"
+    # We use a 'Constraint Prompt'. 
+    # This tells the AI: 'Stay inside the box of this description.'
+    prompt = f"Description: {description}. Story: Once upon a time, I saw {description}. It was a beautiful sight. Then,"
     
-    # max_new_tokens=90 ensures we hit that 50-100 word target perfectly.
     story_output = story_gen(
         prompt, 
-        max_new_tokens=90, 
+        max_new_tokens=60, # Keep it tight so it doesn't drift to 'Dolly Parton'
         do_sample=True, 
-        temperature=0.8, 
-        top_k=50,
-        repetition_penalty=1.2
+        temperature=0.4,   # Low temperature = High focus/sanity
+        top_k=20,          # Only use the most likely, sensible words
+        repetition_penalty=1.5
     )
     
     full_text = story_output[0]['generated_text']
     
-    # Remove the 'Write a happy story...' instruction from the final display
-    clean_story = full_text.split("about ")[-1].replace(description + ".", "").strip()
+    # Extract only the story part
+    story_only = full_text.split("Story: ")[-1]
     
-    # Capitalize the start and end at the last full sentence
-    if "." in clean_story:
-        clean_story = clean_story[:clean_story.rfind(".")+1]
+    # Clean up to ensure it's a beautiful, finished narrative
+    if "." in story_only:
+        story_only = story_only[:story_only.rfind(".")+1]
+    
+    # If the AI produces something too short, we add a friendly closing
+    if len(story_only.split()) < 30:
+        story_only += " It was a truly magical moment that everyone would remember forever."
         
-    return clean_story
+    return story_only
 
 def text2audio(story_text):
     """Fast audio generation for the 'audio format' requirement."""
