@@ -4,71 +4,91 @@ from gtts import gTTS
 from PIL import Image
 import os
 
-# --- 1. THE FUNCTIONS ---
+# --- 1. CORE AI FUNCTIONS ---
 
 @st.cache_resource
 def load_captioning_model():
-    """Bypasses the 'pipeline' task error by loading components directly."""
+    """Loads the 'eyes' of our AI."""
     model_id = "Salesforce/blip-image-captioning-base"
     processor = BlipProcessor.from_pretrained(model_id)
     model = BlipForConditionalGeneration.from_pretrained(model_id)
     return processor, model
 
 def img2text(image):
-    """Turns an image into a simple text description."""
+    """Turns the picture into a simple sentence, cleaning up technical words."""
     processor, model = load_captioning_model()
-    # Prepare image for the model
     inputs = processor(image, return_tensors="pt")
-    # Generate the caption
     out = model.generate(**inputs)
-    # Convert output tokens back to text
     text = processor.decode(out[0], skip_special_tokens=True)
+    
+    # Clean up technical words for a better story start
+    text = text.replace("illustration", "magical scene").replace("drawing", "wonderland")
     return text
 
 def text2story(text):
-    """Expands a short description into a 50-100 word story."""
-    # We keep the pipeline for text-generation as 'gpt2' is more standard
+    """Turns the sentence into a 50-100 word adventure for kids."""
     story_generator = pipeline("text-generation", model="gpt2")
-    prompt = f"Once upon a time, there was {text}. It was a beautiful day and"
-    story_output = story_generator(prompt, max_new_tokens=80, num_return_sequences=1)
-    return story_output[0]['generated_text']
+    
+    # A friendly prompt to guide the AI
+    prompt = f"In a far away land, there was {text}. Suddenly, a magical adventure began! "
+    
+    # max_new_tokens helps hit the 50-100 word assignment requirement
+    story_output = story_generator(prompt, max_new_tokens=90, do_sample=True, temperature=0.8)
+    
+    final_story = story_output[0]['generated_text']
+    
+    # Ensure the story ends nicely at a full stop
+    if "." in final_story:
+        final_story = final_story[:final_story.rfind(".")+1]
+    return final_story
 
 def text2audio(story_text):
-    """Converts the written story into an MP3 audio file."""
-    tts = gTTS(text=story_text, lang='en')
+    """Converts the story into a friendly voice."""
+    # Using the Australian 'com.au' accent for a clear, storytelling tone
+    tts = gTTS(text=story_text, lang='en', tld='com.au')
     audio_file = "story_audio.mp3"
     tts.save(audio_file)
     return audio_file
 
-# --- 2. THE MAIN PART ---
+# --- 2. RAINBOW USER INTERFACE ---
 
 def main():
-    st.set_page_config(page_title="Kids Storyteller", page_icon="📖")
-    st.header("📖 AI Storyteller for Kids")
-    st.write("Upload a photo and listen to a magical story!")
+    st.set_page_config(page_title="Magic Storybook", page_icon="🦄")
 
-    uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "png", "jpeg"])
+    # Using your reference style for a colorful header!
+    st.markdown("# :rainbow[✨ My Magic AI Storybook ✨]")
+    
+    st.markdown('''
+        :red[Upload] :orange[a] :green[photo] :blue[and] :violet[watch] 
+        the :rainbow[magic] happen!''')
+    
+    st.markdown("---")
+
+    # Image upload input for the kids
+    uploaded_file = st.file_uploader("📸 Pick a picture from your computer...", type=["jpg", "png", "jpeg"])
 
     if uploaded_file is not None:
         image = Image.open(uploaded_file).convert("RGB")
-        st.image(image, caption='Your Uploaded Image', use_container_width=True)
+        st.image(image, caption='🌈 Your Magical Portal', use_container_width=True)
         
-        if st.button("Generate Magic"):
-            with st.spinner('AI is thinking...'):
-                # Step 1: Image to Text
+        # Friendly button text
+        if st.button("🪄 Cast Story Spell! ✨"):
+            with st.spinner('🌟 Sprinkling fairy dust...'):
+                
+                # The 3-Step Pipeline
                 description = img2text(image)
-                
-                # Step 2: Text to Story
                 story = text2story(description)
-                
-                # Step 3: Story to Audio
                 audio_path = text2audio(story)
                 
-                st.subheader("The Story")
+                # Display results with fun formatting
+                st.markdown("## :orange[📖 Your Magical Tale]")
                 st.write(story)
                 
-                st.subheader("Listen to the Story")
+                st.markdown("## :blue[🎧 Hear the Magic]")
                 st.audio(audio_path)
+                
+                # A little fun at the end
+                st.markdown(":tulip::cherry_blossom::rose::hibiscus::sunflower::blossom:")
 
 if __name__ == "__main__":
     main()
