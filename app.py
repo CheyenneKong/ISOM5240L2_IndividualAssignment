@@ -9,58 +9,60 @@ import os
 
 @st.cache_resource
 def load_models():
-    """Pre-loads both models to save time later."""
+    """Loads lightweight models that run fast on Streamlit Cloud."""
     # Image Captioning
     cap_model_id = "Salesforce/blip-image-captioning-base"
     processor = BlipProcessor.from_pretrained(cap_model_id)
     caption_model = BlipForConditionalGeneration.from_pretrained(cap_model_id)
     
-    # Storyteller - Switched to TinyLlama for better kid stories and no "-sama" errors
-    story_gen = pipeline("text-generation", model="TinyLlama/TinyLlama-1.1B-Chat-v1.0")
+    # Lightweight Storyteller (DistilGPT2 is faster and uses less memory)
+    story_gen = pipeline("text-generation", model="distilgpt2")
     
     return processor, caption_model, story_gen
 
 processor, caption_model, story_gen = load_models()
 
 def img2text(image):
-    """Describes the image and removes technical jargon."""
+    """Describes the image clearly for the storyteller."""
     inputs = processor(image, return_tensors="pt")
     out = caption_model.generate(**inputs)
     text = processor.decode(out[0], skip_special_tokens=True)
-    # Clean-up technical words
+    # Removing technical words that confuse the story
     text = text.replace("illustration", "scene").replace("drawing", "place")
     return text
 
 def text2story(description):
-    """Creates a concrete 50-100 word story for kids."""
-    # Strict prompt to prevent weird repetitions
-    prompt = f"<|system|>\nYou are a friendly children's storyteller. Write a 60-word happy story based on this: {description}.<|user|>\nOnce upon a time,"
+    """Creates a fast, clean 50-100 word story."""
+    # A clear, simple prompt to keep the AI on track
+    prompt = f"Here is a happy story for children about {description}: Once upon a time,"
     
-    story_output = story_gen(prompt, max_new_tokens=100, do_sample=True, temperature=0.7, top_k=50)
+    # We use 'max_new_tokens' to hit the 50-100 word requirement
+    story_output = story_gen(prompt, max_new_tokens=70, do_sample=True, temperature=0.8, top_k=50)
     
-    # Cleaning the output to remove the 'system' instructions
-    full_text = story_output[0]['generated_text']
-    story_only = full_text.split("<|user|>\n")[-1]
+    story_text = story_output[0]['generated_text']
     
-    # Ensure it ends at a full stop
-    if "." in story_only:
-        story_only = story_only[:story_only.rfind(".")+1]
-    return story_only
+    # Clean up: Remove the prompt and stop at the last full sentence
+    clean_story = story_text.replace(f"Here is a happy story for children about {description}: ", "")
+    if "." in clean_story:
+        clean_story = clean_story[:clean_story.rfind(".")+1]
+    return clean_story
 
 def text2audio(story_text):
-    """Converts story to a friendly voice."""
+    """Fast audio generation for the 'audio format' requirement."""
     tts = gTTS(text=story_text, lang='en', tld='com.au')
     audio_file = "story_audio.mp3"
     tts.save(audio_file)
     return audio_file
 
-# --- 2. RAINBOW USER INTERFACE ---
+# --- 2. THE RAINBOW INTERFACE ---
 
 def main():
-    st.set_page_config(page_title="Magic Storybook", page_icon="🦄")
+    st.set_page_config(page_title="Your Magic Story-Bot", page_icon="🤖")
 
-    st.markdown("# :rainbow[✨ My Magic AI Storybook ✨]")
-    st.markdown("### :violet[Upload a photo to see the magic!]")
+    # Rainbow Title
+    st.markdown("# :rainbow[✨ Your Magic Story-Bot ✨] 🤖")
+    st.markdown("### :violet[Upload a photo and let's go on an adventure!]")
+    st.markdown("---")
 
     uploaded_file = st.file_uploader("📸 Pick a picture...", type=["jpg", "png", "jpeg"])
 
@@ -69,26 +71,33 @@ def main():
         st.image(image, caption='🌈 Your Magical Portal', use_container_width=True)
         
         if st.button("🪄 Cast Story Spell! ✨"):
-            # 1. Kid-friendly Artificial Delay
+            # Magic Progress Bar
             progress_bar = st.progress(0)
             status_text = st.empty()
             
-            messages = ["🔍 Finding the magic...", "✨ Sprinkling fairy dust...", "📖 Writing the adventure..."]
-            for i in range(3):
-                status_text.markdown(f"### :orange[{messages[i]}]")
-                for percent in range(i*33, (i+1)*33):
-                    time.sleep(0.03) # Total roughly 3 seconds
-                    progress_bar.progress(percent + 1)
-            
-            # 2. Run the actual AI magic
+            # Step 1: Descibe
+            status_text.markdown("### :orange[🔍 Seeing the magic...]")
             description = img2text(image)
-            story = text2story(description)
-            audio_path = text2audio(story)
+            progress_bar.progress(33)
+            time.sleep(1) # Visual pause for the '3 second' effect
             
+            # Step 2: Story
+            status_text.markdown("### :green[📖 Writing the adventure...]")
+            story = text2story(description)
+            progress_bar.progress(66)
+            time.sleep(1)
+            
+            # Step 3: Audio
+            status_text.markdown("### :blue[✨ Sprinkling fairy dust...]")
+            audio_path = text2audio(story)
+            progress_bar.progress(100)
+            time.sleep(1)
+            
+            # Clear loading UI
             progress_bar.empty()
             status_text.empty()
 
-            # 3. Show the final results
+            # Final Results
             st.markdown("## :orange[📖 Your Magical Tale]")
             st.info(story)
             
