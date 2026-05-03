@@ -32,20 +32,40 @@ def img2text(image):
     return text
 
 def text2story(description):
-    """Creates a fast, clean 50-100 word story."""
-    # A clear, simple prompt to keep the AI on track
-    prompt = f"Here is a happy story for children about {description}: Once upon a time,"
+    """Creates a joyful 50-100 word story specifically for kids."""
+    # We add 'positive' keywords to the prompt to block scary words like 'dangerous'
+    prompt = (
+        f"Write a cheerful, happy children's story about {description}. "
+        "The sun was shining and all the friends were laughing. "
+        "Once upon a time,"
+    )
     
-    # We use 'max_new_tokens' to hit the 50-100 word requirement
-    story_output = story_gen(prompt, max_new_tokens=70, do_sample=True, temperature=0.8, top_k=50)
+    # max_new_tokens set to 80 to ensure we meet the 50-100 word requirement
+    story_output = story_gen(
+        prompt, 
+        max_new_tokens=80, 
+        do_sample=True, 
+        temperature=0.7, # Lower temperature makes the AI less 'wild' and more focused
+        top_k=40,
+        repetition_penalty=1.2 # This stops it from saying 'jumping, jumping, jumping'
+    )
     
-    story_text = story_output[0]['generated_text']
+    full_text = story_output[0]['generated_text']
     
-    # Clean up: Remove the prompt and stop at the last full sentence
-    clean_story = story_text.replace(f"Here is a happy story for children about {description}: ", "")
-    if "." in clean_story:
-        clean_story = clean_story[:clean_story.rfind(".")+1]
-    return clean_story
+    # Remove the instruction part so the kids only see the story
+    story_only = full_text.split("Once upon a time,")[-1]
+    final_story = "Once upon a time," + story_only
+
+    # Extra safety: Clean out any weird words just in case
+    scary_words = ["dangerous", "scary", "closed", "monster", "animal"]
+    for word in scary_words:
+        final_story = final_story.replace(word, "magical")
+
+    # Cut off at the last complete sentence for a professional finish
+    if "." in final_story:
+        final_story = final_story[:final_story.rfind(".")+1]
+        
+    return final_story
 
 def text2audio(story_text):
     """Fast audio generation for the 'audio format' requirement."""
