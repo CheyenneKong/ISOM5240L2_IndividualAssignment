@@ -1,5 +1,5 @@
 streamlit
 transformers
 torch
-Pillow
-scipy
+pillow
+gTTS
