@@ -9,7 +9,7 @@ import os
 def img2text(url):
     """Turns an image into a simple text description."""
     # Using the specific model recommended in the assignment guide
-    image_to_text_model = pipeline("image-to-text", model="Salesforce/blip-image-captioning-base")
+    image_to_text_model = pipeline("image-captioning", model="Salesforce/blip-image-captioning-base")
     text = image_to_text_model(url)[0]["generated_text"]
     return text
 
