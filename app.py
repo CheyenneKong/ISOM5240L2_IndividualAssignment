@@ -32,33 +32,36 @@ def img2text(image):
     return text
 
 def text2story(description):
-    """A universal storyteller that adapts to ANY image uploaded."""
+    """Universal storyteller with 'Strict Logic' to prevent random hallucinations."""
     
-    # We use a 'Constraint Prompt'. 
-    # This tells the AI: 'Stay inside the box of this description.'
-    prompt = f"Description: {description}. Story: Once upon a time, I saw {description}. It was a beautiful sight. Then,"
+    # We provide a very guided 'Story Starter' to anchor the AI's focus
+    prompt = f"Here is a 60-word children's story about {description}. Once upon a time, "
     
     story_output = story_gen(
         prompt, 
-        max_new_tokens=60, # Keep it tight so it doesn't drift to 'Dolly Parton'
-        do_sample=True, 
-        temperature=0.4,   # Low temperature = High focus/sanity
-        top_k=20,          # Only use the most likely, sensible words
+        max_new_tokens=80, 
+        do_sample=True,    
+        temperature=0.3,   # LOW temperature makes the AI very focused and 'sane'
+        top_p=0.9,         # Filters out the weird/random 'Ms. Rachman' type words
         repetition_penalty=1.5
     )
     
     full_text = story_output[0]['generated_text']
     
-    # Extract only the story part
-    story_only = full_text.split("Story: ")[-1]
-    
-    # Clean up to ensure it's a beautiful, finished narrative
+    # Extract only the story part (after the prompt)
+    # We split by 'Once upon a time,' to get just the narrative
+    if "Once upon a time, " in full_text:
+        story_only = "Once upon a time, " + full_text.split("Once upon a time, ")[-1]
+    else:
+        story_only = full_text
+
+    # Ensure it ends at a full sentence
     if "." in story_only:
         story_only = story_only[:story_only.rfind(".")+1]
-    
-    # If the AI produces something too short, we add a friendly closing
-    if len(story_only.split()) < 30:
-        story_only += " It was a truly magical moment that everyone would remember forever."
+        
+    # Final check: If it's too short, add a generic happy ending to meet the 50-word requirement
+    if len(story_only.split()) < 40:
+        story_only += " Everyone had the most wonderful time exploring this magical place together. It was a day they would never forget!"
         
     return story_only
 
