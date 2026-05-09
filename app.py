@@ -40,7 +40,8 @@ def text2story(description):
         do_sample=True,    
         temperature=0.4,   
         top_p=0.85,        
-        repetition_penalty=1.5
+        repetition_penalty=1.5,
+        early_stopping=True  # <--- Add this here!
     )
     
     full_text = story_output[0]['generated_text']
