@@ -19,26 +19,17 @@ This app utilizes a multi-stage Deep Learning pipeline:
 1. Clone this repository:
    ```bash
    git clone [https://github.com/CheyenneKong/ISOM5240L2_IndividualAssignment.git](https://github.com/CheyenneKong/ISOM5240L2_IndividualAssignment.git)
-Install dependencies:
 
-Bash
+2. Install dependencies:
 pip install -r requirements.txt
-Run the app:
 
-Bash
+3. Run the app:
 streamlit run app.py
-📦 Dependencies
+
+## 📦 Dependencies
 The following libraries are required (and listed in the requirements.txt file):
-
 streamlit
-
 transformers
-
 torch
-
 Pillow
-
 gTTS
-
-🛡️ Academic Integrity
-Code logic and modularity were developed in collaboration with Gemini (AI) to ensure adherence to ISOM5240 technical requirements and deployment best practices. All final implementation, safety logic, and model fine-tuning were managed and reviewed by the student.
