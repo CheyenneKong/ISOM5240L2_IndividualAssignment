@@ -100,7 +100,7 @@ def main():
 
     st.markdown("# :rainbow[✨ Your Magic Story-Bot ✨] 🤖")
     st.markdown("### Upload a photo and let's go on an adventure!")
-    st.markdown("---")
+    st.markdown('<hr style="border: 1px solid #01579B;">', unsafe_allow_html=True)
 
     uploaded_file = st.file_uploader("📸 Pick a picture...", type=["jpg", "png", "jpeg"])
 
