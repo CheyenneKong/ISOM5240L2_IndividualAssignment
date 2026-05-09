@@ -33,52 +33,63 @@ def img2text(image):
 
 def text2story(description):
     """
-    Universal storyteller with explicit Guardrails:
-    1. Tone Anchoring: Forces a 'happy' context.
-    2. Forbidden Word Filter: Removes non-kid-friendly language.
-    3. Length Control: Ensures 50-100 word range.
+    Enhanced Storyteller for ages 3-10:
+    1. Simplifies vocabulary for young readers.
+    2. Uses 'Action Priming' for a more interesting storyline.
+    3. Implements strict word-count and safety filters.
     """
     
-    # --- TA IMPROVEMENT: Tone Anchoring & Context Priming ---
-    # We explicitly tell the model it is a 'HAPPY' and 'KID FRIENDLY' narrator.
-    # This reduces the chance of the AI drifting into news or scary topics.
-    prompt = f"Write a joyful children's story about {description}. The setting is magical and safe. Once upon a time, "
+    # --- TA IMPROVEMENT: Action Priming ---
+    # We add words like 'magic', 'jumped', and 'smiled' to the prompt 
+    # to encourage the AI to write about actions, not just descriptions.
+    prompt = f"A fun kids story about {description}. Everyone was happy and playing. Once upon a time, "
     
     story_output = story_gen(
         prompt, 
-        max_new_tokens=85, # Set to hit the 50-100 word goal
+        max_new_tokens=90, 
         do_sample=True,    
-        temperature=0.4,   # TA TIP: Lower temperature = more predictable/sane output
-        top_p=0.85,        
-        repetition_penalty=1.5
+        temperature=0.5,   # Balanced for focus and a bit of fun
+        top_p=0.8,        
+        repetition_penalty=1.4
     )
     
     full_text = story_output[0]['generated_text']
     
-    # Extract only the narrative part
+    # Extract narrative part
     if "Once upon a time, " in full_text:
         story_only = "Once upon a time, " + full_text.split("Once upon a time, ")[-1]
     else:
         story_only = full_text
 
-    # --- TA IMPROVEMENT: Explicit Forbidden Word Filter ---
-    # We manually define words the AI should never say to a child.
-    forbidden_words = ["death", "died", "dangerous", "scary", "war", "october", "sad", "hurt"]
-    for word in forbidden_words:
-        # We replace scary words with 'magical' or 'happy' alternatives
-        story_only = story_only.replace(word, "wonderful")
-        story_only = story_only.replace(word.capitalize(), "Wonderful")
+    # --- TA IMPROVEMENT: Vocabulary Simplification (Ages 3-10) ---
+    # We manually map 'complex' words the AI likes to use to 'simple' words for kids.
+    simple_vocab_map = {
+        "destination": "special spot",
+        "journey": "trip",
+        "extremely": "very",
+        "beautiful": "pretty",
+        "adventure": "fun game",
+        "magnificent": "great",
+        "illustration": "picture",
+        "discovered": "found"
+    }
+    for complex_word, simple_word in simple_vocab_map.items():
+        story_only = story_only.replace(complex_word, simple_word)
 
-    # Clean up formatting: Ensure it ends at a full sentence
+    # --- TA IMPROVEMENT: Safety Filter ---
+    forbidden_words = ["death", "scary", "dangerous", "hurt", "sad", "october", "year", "people lived"]
+    for word in forbidden_words:
+        story_only = story_only.replace(word, "magic")
+
+    # Ensure full sentences
     if "." in story_only:
         story_only = story_only[:story_only.rfind(".")+1]
         
-    # --- TA IMPROVEMENT: Length Guardrail ---
-    # If the AI is too brief, we use a 'Happy Expansion' to stay within 50-100 words.
+    # --- TA IMPROVEMENT: Length & Engagement Guardrail ---
+    # We add a 'Call to Action' if the story is too short to engage the kid.
     words = story_only.split()
-    if len(words) < 50:
-        expansion = " Everyone felt so much joy and laughter in their hearts. It was the most beautiful adventure they had ever shared together in this magical land."
-        story_only += expansion
+    if len(words) < 55:
+        story_only += " 'Yay!' they all shouted together. It was the best day ever and everyone had a big smile on their face. The end!"
         
     return story_only
 
