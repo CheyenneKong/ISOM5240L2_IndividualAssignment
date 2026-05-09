@@ -15,7 +15,7 @@ def load_models():
     processor = BlipProcessor.from_pretrained(cap_model_id)
     caption_model = BlipForConditionalGeneration.from_pretrained(cap_model_id)
     
-    # Lightweight Storyteller (DistilGPT2 is faster and uses less memory)
+    # Lightweight Storyteller (DistilGPT2)
     story_gen = pipeline("text-generation", model="distilgpt2")
     
     return processor, caption_model, story_gen
@@ -27,66 +27,46 @@ def img2text(image):
     inputs = processor(image, return_tensors="pt")
     out = caption_model.generate(**inputs)
     text = processor.decode(out[0], skip_special_tokens=True)
-    # Removing technical words that confuse the story
     text = text.replace("illustration", "scene").replace("drawing", "place")
     return text
 
 def text2story(description):
-    """
-    Enhanced Storyteller for ages 3-10:
-    1. Simplifies vocabulary for young readers.
-    2. Uses 'Action Priming' for a more interesting storyline.
-    3. Implements strict word-count and safety filters.
-    """
-    
-    # --- TA IMPROVEMENT: Action Priming ---
-    # We add words like 'magic', 'jumped', and 'smiled' to the prompt 
-    # to encourage the AI to write about actions, not just descriptions.
+    """Enhanced Storyteller for ages 3-10 with TA Guardrails."""
     prompt = f"A fun kids story about {description}. Everyone was happy and playing. Once upon a time, "
     
     story_output = story_gen(
         prompt, 
         max_new_tokens=90, 
         do_sample=True,    
-        temperature=0.5,   # Balanced for focus and a bit of fun
+        temperature=0.5,   
         top_p=0.8,        
         repetition_penalty=1.4
     )
     
     full_text = story_output[0]['generated_text']
     
-    # Extract narrative part
     if "Once upon a time, " in full_text:
         story_only = "Once upon a time, " + full_text.split("Once upon a time, ")[-1]
     else:
         story_only = full_text
 
-    # --- TA IMPROVEMENT: Vocabulary Simplification (Ages 3-10) ---
-    # We manually map 'complex' words the AI likes to use to 'simple' words for kids.
+    # Vocabulary Simplification Map
     simple_vocab_map = {
-        "destination": "special spot",
-        "journey": "trip",
-        "extremely": "very",
-        "beautiful": "pretty",
-        "adventure": "fun game",
-        "magnificent": "great",
-        "illustration": "picture",
-        "discovered": "found"
+        "destination": "special spot", "journey": "trip", "extremely": "very",
+        "beautiful": "pretty", "adventure": "fun game", "magnificent": "great"
     }
     for complex_word, simple_word in simple_vocab_map.items():
         story_only = story_only.replace(complex_word, simple_word)
 
-    # --- TA IMPROVEMENT: Safety Filter ---
-    forbidden_words = ["death", "scary", "dangerous", "hurt", "sad", "october", "year", "people lived"]
+    # Safety Filter
+    forbidden_words = ["death", "scary", "dangerous", "hurt", "sad", "october", "year"]
     for word in forbidden_words:
         story_only = story_only.replace(word, "magic")
 
-    # Ensure full sentences
     if "." in story_only:
         story_only = story_only[:story_only.rfind(".")+1]
         
-    # --- TA IMPROVEMENT: Length & Engagement Guardrail ---
-    # We add a 'Call to Action' if the story is too short to engage the kid.
+    # Length Guardrail (Requirement: 50-100 words)
     words = story_only.split()
     if len(words) < 55:
         story_only += " 'Yay!' they all shouted together. It was the best day ever and everyone had a big smile on their face. The end!"
@@ -94,22 +74,43 @@ def text2story(description):
     return story_only
 
 def text2audio(story_text):
-    """Fast audio generation for the 'audio format' requirement."""
+    """Converts story to audio[cite: 16, 25]."""
     tts = gTTS(text=story_text, lang='en', tld='com.au')
     audio_file = "story_audio.mp3"
     tts.save(audio_file)
     return audio_file
 
-# --- 2. THE RAINBOW INTERFACE ---
+# --- 2. THE MAGIC INTERFACE ---
 
 def main():
+    # Browser Tab Setup [cite: 28]
     st.set_page_config(page_title="Your Magic Story-Bot", page_icon="🤖")
 
-    # Rainbow Title
+    # --- SUGGESTION #3: Colorful Background ---
+    # Custom CSS to make the app more child-friendly
+    st.markdown("""
+        <style>
+        .stApp {
+            background-color: #FDFCF0; /* Soft cream/yellow for a storybook feel */
+        }
+        .story-container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 15px;
+            border: 3px solid #FFD700;
+            box-shadow: 5px 5px 15px rgba(0,0,0,0.1);
+            font-size: 18px;
+            color: #333;
+        }
+        </style>
+        """, unsafe_allow_html=True)
+
+    # Rainbow Title and Header [cite: 28, 31]
     st.markdown("# :rainbow[✨ Your Magic Story-Bot ✨] 🤖")
     st.markdown("### :violet[Upload a photo and let's go on an adventure!]")
     st.markdown("---")
 
+    # Image Input [cite: 13, 20]
     uploaded_file = st.file_uploader("📸 Pick a picture...", type=["jpg", "png", "jpeg"])
 
     if uploaded_file is not None:
@@ -121,34 +122,35 @@ def main():
             progress_bar = st.progress(0)
             status_text = st.empty()
             
-            # Step 1: Descibe
-            status_text.markdown("### :orange[🔍 Seeing the magic...]")
+            status_text.markdown("### 🧐 :orange[The Robot is putting on its glasses...]")
             description = img2text(image)
             progress_bar.progress(33)
-            time.sleep(1) # Visual pause for the '3 second' effect
+            time.sleep(1)
             
-            # Step 2: Story
-            status_text.markdown("### :green[📖 Writing the adventure...]")
+            status_text.markdown("### ✍️ :green[Mixing colors and words...]")
             story = text2story(description)
             progress_bar.progress(66)
             time.sleep(1)
             
-            # Step 3: Audio
-            status_text.markdown("### :blue[✨ Sprinkling fairy dust...]")
+            status_text.markdown("### ✨ :blue[Sprinkling fairy dust...]")
             audio_path = text2audio(story)
             progress_bar.progress(100)
             time.sleep(1)
             
-            # Clear loading UI
             progress_bar.empty()
             status_text.empty()
 
-            # Final Results
+            # --- SUGGESTION #1: Celebration ---
+            st.balloons() 
+
+            # --- SUGGESTION #5: Storybook Card Formatting ---
             st.markdown("## :orange[📖 Your Magical Tale]")
-            st.info(story)
+            st.markdown(f'<div class="story-container">{story}</div>', unsafe_allow_html=True)
             
+            st.markdown("---")
             st.markdown("## :blue[🎧 Hear the Magic]")
-            st.audio(audio_path)
+            st.markdown("##### 📢 Press play to hear your story, little adventurer!")
+            st.audio(audio_path) # [cite: 16]
             
             st.markdown(":tulip::cherry_blossom::rose::hibiscus::sunflower::blossom:")
 
