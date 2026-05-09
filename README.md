@@ -20,4 +20,4 @@ This app utilizes a multi-stage Deep Learning pipeline:
 ## 🚀 How to Run Locally
 1. Clone this repository:
    ```bash
-   git clone [https://github.com/CheyenneKong/magic-storybot-cheyennekong.git](https://github.com/CheyenneKong/magic-storybot-cheyennekong.git)
+   git clone [https://github.com/CheyenneKong/ISOM5240L2_IndividualAssignment.git](https://github.com/CheyenneKong/ISOM5240L2_IndividualAssignment.git)
