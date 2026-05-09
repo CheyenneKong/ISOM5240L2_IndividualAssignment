@@ -30,6 +30,7 @@ This app utilizes a multi-stage Deep Learning pipeline:
 
 ## 📦 Dependencies
 The following libraries are required (and listed in the requirements.txt file):
+```bash
 streamlit
 transformers
 torch
