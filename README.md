@@ -21,10 +21,12 @@ This app utilizes a multi-stage Deep Learning pipeline:
    git clone [https://github.com/CheyenneKong/ISOM5240L2_IndividualAssignment.git](https://github.com/CheyenneKong/ISOM5240L2_IndividualAssignment.git)
 
 2. Install dependencies:
-pip install -r requirements.txt
+   ```bash
+   pip install -r requirements.txt
 
-3. Run the app:
-streamlit run app.py
+4. Run the app:
+   ```bash
+   streamlit run app.py
 
 ## 📦 Dependencies
 The following libraries are required (and listed in the requirements.txt file):
