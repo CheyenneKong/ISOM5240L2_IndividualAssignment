@@ -10,12 +10,12 @@ import os
 @st.cache_resource
 def load_models():
     """Loads lightweight models for Streamlit Cloud deployment."""
-    # Image Captioning [cite: 20, 21]
+    # Image Captioning
     cap_model_id = "Salesforce/blip-image-captioning-base"
     processor = BlipProcessor.from_pretrained(cap_model_id)
     caption_model = BlipForConditionalGeneration.from_pretrained(cap_model_id)
     
-    # Story Generation [cite: 23]
+    # Story Generation
     story_gen = pipeline("text-generation", model="distilgpt2")
     
     return processor, caption_model, story_gen
@@ -30,9 +30,9 @@ def img2text(image):
     return text
 
 def text2story(description):
-    """Generates a 50-100 word third-person narrative[cite: 8, 14]."""
-    # Priming the AI for third-person and a happy tone for 3-10 year olds [cite: 8]
-    prompt = f"A happy story for kids about {description}. The friends were playing. Once upon a time, they "
+    """Generates a 50-100 word third-person narrative with safety filters."""
+    # Forced innocence prompt to prevent hallucinations
+    prompt = f"Write a happy, innocent story for young children about {description}. The animal friends were playing. Once upon a time, they "
     
     story_output = story_gen(
         prompt, 
@@ -45,21 +45,25 @@ def text2story(description):
     
     full_text = story_output[0]['generated_text']
     
-    # Extract only the story section starting from the third-person prime
     if "Once upon a time, they " in full_text:
         story_only = "Once upon a time, they " + full_text.split("Once upon a time, they ")[-1]
     else:
         story_only = full_text
 
-    # Safety and Vocabulary Filters for 3-10 year olds [cite: 8]
-    forbidden = ["death", "scary", " I ", " me ", " my "]
+    # --- ADDED: Strict 18+ Safety Filter & Vocabulary Logic ---
+    # Targets drugs, alcohol, and adult content mentioned in your feedback
+    forbidden = [
+        "death", "scary", " I ", " me ", " my ", "weed", "pot", "smoke", 
+        "drug", "alcohol", "drink", "beer", "wine", "sex", "naked", "18+"
+    ]
     for word in forbidden:
-        story_only = story_only.replace(word, "magic")
+        if word.lower() in story_only.lower():
+            story_only = story_only.replace(word, "magic rainbows")
 
     if "." in story_only:
         story_only = story_only[:story_only.rfind(".")+1]
         
-    # Ensuring word count is between 50-100 [cite: 14]
+    # Ensuring word count is between 50-100
     words = story_only.split()
     if len(words) < 55:
         story_only += " They all shared a wonderful adventure together. It was the best day ever in their happy world! The end!"
@@ -68,17 +72,20 @@ def text2story(description):
 
 def text2audio(story_text):
     """Converts the narrative to audio format."""
-    tts = gTTS(text=story_text, lang='en', tld='com.au')
-    audio_file = "story_audio.mp3"
-    tts.save(audio_file)
-    return audio_file
+    try:
+        tts = gTTS(text=story_text, lang='en', tld='com.au')
+        audio_file = "story_audio.mp3"
+        tts.save(audio_file)
+        return audio_file
+    except Exception:
+        return None
 
 # --- 2. THE MAGIC INTERFACE ---
 
 def main():
     st.set_page_config(page_title="Your Magic Story-Bot", page_icon="🤖")
 
-    # CSS for Sky Blue theme and Storybook container [cite: 28, 31]
+    # Combined CSS for Theme, Enlarged Label, and Gold Button
     st.markdown("""
         <style>
         .stApp {
@@ -94,6 +101,25 @@ def main():
         }
         h1, h2, h3, p, label {
             color: #01579B !important;
+        }
+        /* ADDED: Enlarge "Pick a picture" label */
+        .stFileUploader label {
+            font-size: 26px !important;
+            font-weight: bold !important;
+        }
+        /* ADDED: Gold Cast Spell Button */
+        div.stButton > button:first-child {
+            background-color: #FFD700;
+            color: #01579B;
+            font-size: 24px;
+            font-weight: bold;
+            border-radius: 12px;
+            border: 2px solid #01579B;
+            transition: 0.3s;
+        }
+        div.stButton > button:first-child:hover {
+            background-color: #FFB300;
+            color: white;
         }
         </style>
         """, unsafe_allow_html=True)
@@ -112,35 +138,9 @@ def main():
             progress_bar = st.progress(0)
             status_text = st.empty()
             
-            # One-line big loading text 
             status_text.markdown("## 🔍 Seeing the magic...")
             description = img2text(image)
             progress_bar.progress(33)
             time.sleep(1)
             
             status_text.markdown("## 📖 Writing the adventure...")
-            story = text2story(description)
-            progress_bar.progress(66)
-            time.sleep(1)
-            
-            status_text.markdown("## ✨ Sprinkling fairy dust...")
-            audio_path = text2audio(story)
-            progress_bar.progress(100)
-            time.sleep(1)
-            
-            progress_bar.empty()
-            status_text.empty()
-
-            st.balloons() 
-
-            st.markdown("## 📖 Your Magical Tale")
-            st.markdown(f'<div class="story-container">{story}</div>', unsafe_allow_html=True)
-            
-            st.markdown("---")
-            st.markdown("## 🎧 Hear the Magic")
-            st.audio(audio_path) 
-            
-            st.markdown("🌟 🎈 🎨 🍦 🍭 🎠")
-
-if __name__ == "__main__":
-    main()
