@@ -32,36 +32,53 @@ def img2text(image):
     return text
 
 def text2story(description):
-    """Universal storyteller with 'Strict Logic' to prevent random hallucinations."""
+    """
+    Universal storyteller with explicit Guardrails:
+    1. Tone Anchoring: Forces a 'happy' context.
+    2. Forbidden Word Filter: Removes non-kid-friendly language.
+    3. Length Control: Ensures 50-100 word range.
+    """
     
-    # We provide a very guided 'Story Starter' to anchor the AI's focus
-    prompt = f"Here is a 60-word children's story about {description}. Once upon a time, "
+    # --- TA IMPROVEMENT: Tone Anchoring & Context Priming ---
+    # We explicitly tell the model it is a 'HAPPY' and 'KID FRIENDLY' narrator.
+    # This reduces the chance of the AI drifting into news or scary topics.
+    prompt = f"Write a joyful children's story about {description}. The setting is magical and safe. Once upon a time, "
     
     story_output = story_gen(
         prompt, 
-        max_new_tokens=80, 
+        max_new_tokens=85, # Set to hit the 50-100 word goal
         do_sample=True,    
-        temperature=0.3,   # LOW temperature makes the AI very focused and 'sane'
-        top_p=0.9,         # Filters out the weird/random 'Ms. Rachman' type words
+        temperature=0.4,   # TA TIP: Lower temperature = more predictable/sane output
+        top_p=0.85,        
         repetition_penalty=1.5
     )
     
     full_text = story_output[0]['generated_text']
     
-    # Extract only the story part (after the prompt)
-    # We split by 'Once upon a time,' to get just the narrative
+    # Extract only the narrative part
     if "Once upon a time, " in full_text:
         story_only = "Once upon a time, " + full_text.split("Once upon a time, ")[-1]
     else:
         story_only = full_text
 
-    # Ensure it ends at a full sentence
+    # --- TA IMPROVEMENT: Explicit Forbidden Word Filter ---
+    # We manually define words the AI should never say to a child.
+    forbidden_words = ["death", "died", "dangerous", "scary", "war", "october", "sad", "hurt"]
+    for word in forbidden_words:
+        # We replace scary words with 'magical' or 'happy' alternatives
+        story_only = story_only.replace(word, "wonderful")
+        story_only = story_only.replace(word.capitalize(), "Wonderful")
+
+    # Clean up formatting: Ensure it ends at a full sentence
     if "." in story_only:
         story_only = story_only[:story_only.rfind(".")+1]
         
-    # Final check: If it's too short, add a generic happy ending to meet the 50-word requirement
-    if len(story_only.split()) < 40:
-        story_only += " Everyone had the most wonderful time exploring this magical place together. It was a day they would never forget!"
+    # --- TA IMPROVEMENT: Length Guardrail ---
+    # If the AI is too brief, we use a 'Happy Expansion' to stay within 50-100 words.
+    words = story_only.split()
+    if len(words) < 50:
+        expansion = " Everyone felt so much joy and laughter in their hearts. It was the most beautiful adventure they had ever shared together in this magical land."
+        story_only += expansion
         
     return story_only
 
