@@ -10,12 +10,12 @@ import os
 @st.cache_resource
 def load_models():
     """Loads lightweight models for Streamlit Cloud deployment."""
-    # Image Captioning
+    # Image Captioning [cite: 20, 21]
     cap_model_id = "Salesforce/blip-image-captioning-base"
     processor = BlipProcessor.from_pretrained(cap_model_id)
     caption_model = BlipForConditionalGeneration.from_pretrained(cap_model_id)
     
-    # Story Generation
+    # Story Generation [cite: 23]
     story_gen = pipeline("text-generation", model="distilgpt2")
     
     return processor, caption_model, story_gen
@@ -30,8 +30,8 @@ def img2text(image):
     return text
 
 def text2story(description):
-    """Generates a 50-100 word third-person narrative."""
-    # Priming the AI for third-person and a happy tone for 3-10 year olds
+    """Generates a 50-100 word third-person narrative[cite: 8, 14]."""
+    # Priming the AI for third-person and a happy tone for 3-10 year olds [cite: 8]
     prompt = f"A happy story for kids about {description}. The friends were playing. Once upon a time, they "
     
     story_output = story_gen(
@@ -51,7 +51,7 @@ def text2story(description):
     else:
         story_only = full_text
 
-    # Safety and Vocabulary Filters for 3-10 year olds
+    # Safety and Vocabulary Filters for 3-10 year olds [cite: 8]
     forbidden = ["death", "scary", " I ", " me ", " my "]
     for word in forbidden:
         story_only = story_only.replace(word, "magic")
@@ -59,7 +59,7 @@ def text2story(description):
     if "." in story_only:
         story_only = story_only[:story_only.rfind(".")+1]
         
-    # Ensuring word count is between 50-100
+    # Ensuring word count is between 50-100 [cite: 14]
     words = story_only.split()
     if len(words) < 55:
         story_only += " They all shared a wonderful adventure together. It was the best day ever in their happy world! The end!"
@@ -78,7 +78,7 @@ def text2audio(story_text):
 def main():
     st.set_page_config(page_title="Your Magic Story-Bot", page_icon="🤖")
 
-    # CSS for Sky Blue theme and Storybook container
+    # CSS for Sky Blue theme and Storybook container [cite: 28, 31]
     st.markdown("""
         <style>
         .stApp {
@@ -112,7 +112,7 @@ def main():
             progress_bar = st.progress(0)
             status_text = st.empty()
             
-            # One-line big loading text
+            # One-line big loading text 
             status_text.markdown("## 🔍 Seeing the magic...")
             description = img2text(image)
             progress_bar.progress(33)
@@ -120,4 +120,27 @@ def main():
             
             status_text.markdown("## 📖 Writing the adventure...")
             story = text2story(description)
-            progress_bar
+            progress_bar.progress(66)
+            time.sleep(1)
+            
+            status_text.markdown("## ✨ Sprinkling fairy dust...")
+            audio_path = text2audio(story)
+            progress_bar.progress(100)
+            time.sleep(1)
+            
+            progress_bar.empty()
+            status_text.empty()
+
+            st.balloons() 
+
+            st.markdown("## 📖 Your Magical Tale")
+            st.markdown(f'<div class="story-container">{story}</div>', unsafe_allow_html=True)
+            
+            st.markdown("---")
+            st.markdown("## 🎧 Hear the Magic")
+            st.audio(audio_path) 
+            
+            st.markdown("🌟 🎈 🎨 🍦 🍭 🎠")
+
+if __name__ == "__main__":
+    main()
